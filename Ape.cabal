@@ -1,0 +1,24 @@
+name:                Ape
+version:             0.1.0.0
+synopsis:            A simple intermediate representation.
+license:             LGPL-3
+license-file:        LICENSE.txt
+author:              Arsène Pérard-Gayot
+maintainer:          arsene.perard@laposte.net
+category:            Language
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  default-language:    Haskell2010
+  build-depends:       base, containers, parsec, text, data-stringmap
+  exposed-modules:     Ape.Expr, Ape.Eval, Ape.Type, Ape.Env, Ape.Check,
+                       Ape.Transform.Substitute
+  ghc-options:         -Wall
+  hs-source-dirs:      src
+
+executable ApeMachine
+  default-language:    Haskell2010
+  main-is:             Main.hs
+  hs-source-dirs:      src/ApeMachine
+  build-depends:       Ape, base, bytestring, parsec, text
