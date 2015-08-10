@@ -152,27 +152,16 @@ compareValues op (F64 a) (F64 b) = I1 $ zipWith (compareFunction op) a b
 compareValues _ _ _ = error "Invalid operands for comparison"
 
 bitcastValue :: T.Type -> Value -> Value
-bitcastValue (T.I1 _) x@(I1 _) = x
-bitcastValue (T.I8 _) x@(I8 _) = x
-bitcastValue (T.U8 _) x@(U8 _) = x
 bitcastValue (T.U8 _) (I8 x) = U8 $ map unsafeCoerce x
 bitcastValue (T.I8 _) (U8 x) = I8 $ map unsafeCoerce x
-bitcastValue (T.I16 _) x@(I16 _) = x
-bitcastValue (T.U16 _) x@(U16 _) = x
 bitcastValue (T.U16 _) (I16 x) = U16 $ map unsafeCoerce x
 bitcastValue (T.I16 _) (U16 x) = I16 $ map unsafeCoerce x
-bitcastValue (T.I32 _) x@(I32 _) = x
-bitcastValue (T.U32 _) x@(U32 _) = x
-bitcastValue (T.F32 _) x@(F32 _) = x
 bitcastValue (T.U32 _) (I32 x) = U32 $ map unsafeCoerce x
 bitcastValue (T.I32 _) (U32 x) = I32 $ map unsafeCoerce x
 bitcastValue (T.I32 _) (F32 x) = I32 $ map unsafeCoerce x
 bitcastValue (T.F32 _) (I32 x) = F32 $ map unsafeCoerce x
 bitcastValue (T.U32 _) (F32 x) = U32 $ map unsafeCoerce x
 bitcastValue (T.F32 _) (U32 x) = F32 $ map unsafeCoerce x
-bitcastValue (T.I64 _) x@(I64 _) = x
-bitcastValue (T.U64 _) x@(U64 _) = x
-bitcastValue (T.F64 _) x@(F64 _) = x
 bitcastValue (T.U64 _) (I64 x) = U64 $ map unsafeCoerce x
 bitcastValue (T.I64 _) (U64 x) = I64 $ map unsafeCoerce x
 bitcastValue (T.I64 _) (F64 x) = I64 $ map unsafeCoerce x

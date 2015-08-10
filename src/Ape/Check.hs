@@ -95,7 +95,8 @@ instance Checkable E.AExpr where
         enforceEqual tb tc
     check e (E.PrimOp (E.BitCast t) [a]) = do
         ta <- check e a
-        enforce t ((bitCount ta ==) . bitCount) "Sizes do not match in bitcast"
+        _ <- enforce t ((bitCount ta ==) . bitCount) "Sizes do not match in bitcast"
+        enforce t (/= ta) "Cannot bitcast to the same type"
     check e (E.PrimOp (E.TupleElem i) [a]) = do
         ta <- check e a
         _ <- enforceTuple ta

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Ape.Parse (irParser, IRParser) where
 
 import qualified Ape.Expr as Expr
@@ -14,31 +15,46 @@ type IRParser = Parser [Expr.Expr]
 irParser :: IRParser
 irParser = manyTill expr eof
 
-boolConstant :: Parser Bool
-boolConstant =   do { reserved "true" ; return True }
+boolValue :: Parser Bool
+boolValue =   do { reserved "true" ; return True }
              <|> do { reserved "false" ; return False }
              <?> "boolean constant"
 
-intConstant :: Num a => Parser a
-intConstant = integer >>= (return . fromIntegral) <?> "integer constant"
+intValue :: Num a => Parser a
+intValue = integer >>= (return . fromIntegral) <?> "integer constant"
 
-floatConstant :: (Fractional a) => Parser a
-floatConstant = float >>= (return . realToFrac) <?> "floating point constant"
+floatValue :: (Fractional a) => Parser a
+floatValue = float >>= (return . realToFrac) <?> "floating point constant"
 
-constant :: Parser Expr.Constant
-constant =   do { reserved "i8"  ; intConstant >>= (return . Expr.I8)  }
-         <|> do { reserved "i16" ; intConstant >>= (return . Expr.I16) }
-         <|> do { reserved "i32" ; intConstant >>= (return . Expr.I32) }
-         <|> do { reserved "i64" ; intConstant >>= (return . Expr.I64) }
-         <|> do { reserved "u8"  ; intConstant >>= (return . Expr.U8)  }
-         <|> do { reserved "u16" ; intConstant >>= (return . Expr.U16) }
-         <|> do { reserved "u32" ; intConstant >>= (return . Expr.U32) }
-         <|> do { reserved "u64" ; intConstant >>= (return . Expr.U64) }
-         <|> do { reserved "f32" ; floatConstant >>= (return . Expr.F32) }
-         <|> do { reserved "f64" ; floatConstant >>= (return . Expr.F64) }
-         <|> do { reserved "i1"  ; boolConstant >>= (return . Expr.I1) }
-         <|> ((parens $ constant `sepBy` (symbol ",")) >>= (return . Expr.Tuple))
-         <?> "constant"
+lambdaValue :: Parser Expr.Value
+lambdaValue = do
+    _ <- reserved "lambda"
+    v <- identifier
+    _ <- symbol ":"
+    t <- typeName
+    e <- expr
+    return $ Expr.Lambda v t e
+
+vector :: Parser a -> Parser [a]
+vector p =  (angles (sepBy1 p $ symbol ","))
+         <|> do { x <- p ; return [x] }
+
+value :: Parser Expr.Value
+value =   do { reserved "i8"  ; (vector intValue) >>= (return . Expr.I8)  }
+      <|> do { reserved "i16" ; (vector intValue) >>= (return . Expr.I16) }
+      <|> do { reserved "i32" ; (vector intValue) >>= (return . Expr.I32) }
+      <|> do { reserved "i64" ; (vector intValue) >>= (return . Expr.I64) }
+      <|> do { reserved "u8"  ; (vector intValue) >>= (return . Expr.U8)  }
+      <|> do { reserved "u16" ; (vector intValue) >>= (return . Expr.U16) }
+      <|> do { reserved "u32" ; (vector intValue) >>= (return . Expr.U32) }
+      <|> do { reserved "u64" ; (vector intValue) >>= (return . Expr.U64) }
+      <|> do { reserved "f32" ; (vector floatValue) >>= (return . Expr.F32) }
+      <|> do { reserved "f64" ; (vector floatValue) >>= (return . Expr.F64) }
+      <|> do { reserved "i1"  ; (vector boolValue) >>= (return . Expr.I1) }
+      <|> ((parens $ value `sepBy` (symbol ",")) >>= (return . Expr.Tuple))
+      <|> (identifier >>= (return . Expr.Var))
+      <|> lambdaValue
+      <?> "value"
 
 letExpr :: Parser Expr.Expr
 letExpr = do
@@ -59,13 +75,12 @@ letBinding = do
 
 complexExpr :: Parser Expr.CExpr
 complexExpr = ifExpr
-            <|> try lambdaAppExpr
+            <|> do { v <- value ; (lambdaAppExpr v) <|> (binaryExpr v >>= (return . Expr.Atomic)) }
             <|> (atomicExpr >>= (return . Expr.Atomic))
             <?> "complex expression"
 
-lambdaAppExpr :: Parser Expr.CExpr
-lambdaAppExpr = do
-    x <- value
+lambdaAppExpr :: Expr.Value -> Parser Expr.CExpr
+lambdaAppExpr x = do
     xs <- many1 value
     return $ Expr.App (x:xs)
 
@@ -80,52 +95,32 @@ ifExpr = do
     return $ Expr.If c t f
 
 typeName :: Parser Type.Type
-typeName =  try (primType >>= lambdaType p)
-         <|> primType
-         <?> "type name"
+typeName =  do { p <- primType ; (lambdaType p) <|> (return p) } <?> "type name"
 
-primType =   do { reserved "i8"  ; return Type.I8  }
-         <|> do { reserved "i16" ; return Type.I16 }
-         <|> do { reserved "i32" ; return Type.I32 }
-         <|> do { reserved "i64" ; return Type.I64 }
-         <|> do { reserved "u8"  ; return Type.U8  }
-         <|> do { reserved "u16" ; return Type.U16 }
-         <|> do { reserved "u32" ; return Type.U32 }
-         <|> do { reserved "u64" ; return Type.U64 }
-         <|> do { reserved "f32" ; return Type.F32 }
-         <|> do { reserved "f64" ; return Type.F64 }
-         <|> do { reserved "i1"  ; return Type.I1  }
-         <|> ((parens $ primType `sepBy` (symbol ",")) >>= (return . Type.Tuple))
-
-lambdaType :: Parser Type.Type
+lambdaType :: Type.Type -> Parser Type.Type
 lambdaType v = do
     _ <- symbol "->"
     b <- typeName
     return $ Type.Lambda v b
 
-value :: Parser Expr.Value
-value = (constant >>= (return . Expr.Cst))
-      <|> (identifier >>= (return . Expr.Var))
-      <|> lambdaValue
-      <?> "value"
-
-lambdaValue :: Parser Expr.Value
-lambdaValue = do
-    _ <- reserved "lambda"
-    v <- lambdaBinding `sepBy1` (symbol ",")
-    _ <- symbol "->"
-    e <- expr
-    return $ Expr.Lambda v e
-
-lambdaBinding :: Parser (Expr.Variable, Type.Type)
-lambdaBinding = do
-    v <- identifier
-    _ <- symbol ":"
-    t <- typeName
-    return $ (v, t)
+primType :: Parser Type.Type
+primType =   do { reserved "i8"  ; l <- vectorSize ; return (Type.I8  l) }
+         <|> do { reserved "i16" ; l <- vectorSize ; return (Type.I16 l) }
+         <|> do { reserved "i32" ; l <- vectorSize ; return (Type.I32 l) }
+         <|> do { reserved "i64" ; l <- vectorSize ; return (Type.I64 l) }
+         <|> do { reserved "u8"  ; l <- vectorSize ; return (Type.U8  l) }
+         <|> do { reserved "u16" ; l <- vectorSize ; return (Type.U16 l) }
+         <|> do { reserved "u32" ; l <- vectorSize ; return (Type.U32 l) }
+         <|> do { reserved "u64" ; l <- vectorSize ; return (Type.U64 l) }
+         <|> do { reserved "f32" ; l <- vectorSize ; return (Type.F32 l) }
+         <|> do { reserved "f64" ; l <- vectorSize ; return (Type.F64 l) }
+         <|> do { reserved "i1"  ; l <- vectorSize ; return (Type.I1  l) }
+         <|> ((parens $ typeName `sepBy` (symbol ",")) >>= (return . Type.Tuple))
+         where
+             vectorSize = (angles intValue) <|> (return 1)
 
 elemExpr :: Parser Expr.AExpr
-elemExpr = do { reserved "at" ; i <- angles intConstant ; a <- value ; return $ Expr.PrimOp (Expr.TupleElem i) [a] }
+elemExpr = do { reserved "at" ; i <- angles intValue ; a <- value ; return $ Expr.PrimOp (Expr.TupleElem i) [a] }
          <?> "tuple index expression"
 
 bitcastExpr :: Parser Expr.AExpr
@@ -147,11 +142,11 @@ binaryExpr l =   helper l "+" Expr.Add
              <|> (return . Expr.Val) l
              <?> "binary expression"
     where
-        helper a r op = do { reservedOp r; b <- value; return $ Expr.PrimOp op [a, b] }
+        helper a r op = do { reservedOp r ; b <- value ; return $ Expr.PrimOp op [a, b] }
 
 atomicExpr :: Parser Expr.AExpr
-atomicExpr = (try $ parens atomicExpr)
-           <|> do { a <- value; binaryExpr a }
+atomicExpr =   do { a <- value ; binaryExpr a }
+           <|> (parens atomicExpr)
            <|> elemExpr
            <|> bitcastExpr
            <?> "atomic expression"

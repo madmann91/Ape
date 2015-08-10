@@ -1,13 +1,18 @@
-import Ape.Parse
 import Ape.Check
 import Ape.Env
 import Ape.Eval
 import Ape.Expr
+import Ape.Parse
+import qualified Ape.Type as T
+import Ape.Transform.CommonSubExpr
 
 import qualified Data.Text.Encoding as E
 import qualified Data.ByteString as BS
 import Text.Parsec
 import Control.Monad
+import System.Console.GetOpt
+import System.Environment
+import Data.Char
 
 logo = unlines [
     "     .-\"-.            .-\"-.          .-\"-.             ",
@@ -18,15 +23,52 @@ logo = unlines [
     "\\ \\_/`\"\"\"`\\_/ /  \\ \\_/`\"\"\"`\\_/ /    /`\\ /`\\ ",
     " \\           /    \\           /    /  /|\\  \\          "]
 
-main = do
-    putStrLn logo
-    bytes <- BS.readFile "input.ape"
+data Flag = OptLevel Int
+data Options = Options { optLevel :: Int
+                       , files :: [String]
+                       } deriving Show
+
+defaultOptions :: [String] -> Options
+defaultOptions f = Options { optLevel = 3, files = f }
+
+options :: [ OptDescr (Options -> IO Options) ]
+options =
+    [ Option [] ["opt-level"] (ReqArg readOptLevel "level") "Optimisation level"
+    , Option "h" ["help"] (NoArg showHelp) "Show help"
+    ]
+    where
+        readOptLevel arg opt = return opt { optLevel = read arg }
+        showHelp opt = do
+            putStrLn logo
+            putStrLn (usageInfo "ApeMachine [options] files..." options)
+            return opt
+
+parseOptions :: IO Options
+parseOptions = do
+    args <- getArgs
+    case getOpt RequireOrder options args of
+        ([], [], []) -> noInput
+        (actions, nonOptions, [])-> foldl (>>=) (return $ defaultOptions nonOptions) actions
+        (_, _, errors) -> parsingError errors
+    where
+        noInput = putStrLn "No input files" >> (return $ defaultOptions [])
+        parsingError errors = do
+            mapM_ (\(x:xs) -> putStr $ (toUpper x):xs) errors
+            return $ defaultOptions [] 
+
+compileFile :: String -> IO ()
+compileFile file = do
+    bytes <- BS.readFile file
     let text = E.decodeUtf8 bytes
-    let ast = parse irParser "input.ape" text
-    case ast of
-        Right list -> do
-            print ast
-            forM_ list (\e -> case check emptyEnv e of
-                Right t -> print t
-                Left msg -> print msg)
-        Left msg -> print msg
+    case parse irParser file text of
+        Left err -> print err
+        Right exprs -> forM_ exprs (\ast ->
+            case check emptyEnv ast of
+                Left msg -> putStrLn msg
+                Right t -> do
+                    print t
+                    print $ commonSubExpr emptyExprMap emptyEnv ast)
+
+main = do
+    opts <- parseOptions
+    mapM_ compileFile (files opts)
