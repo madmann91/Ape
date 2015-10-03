@@ -5,6 +5,9 @@ import qualified Ape.Type as Type
 import Data.Int
 import Data.Word
 
+-- Memory access rights
+data Access = ReadWrite | ReadOnly | WriteOnly deriving (Eq, Ord)
+
 -- Values, result of the evaluation of a program
 data Value = I1  [Bool]
            | I8  [Int8]
@@ -20,13 +23,13 @@ data Value = I1  [Bool]
            | Tuple [Value]
            | Var Variable
            | Lambda Variable Type.Type Expr
-           deriving (Show, Eq, Ord)
+           deriving (Eq, Ord)
 
 -- Variables, represented as IDs, must be unique within a module
 type Variable = String
 
 -- Comparison functions
-data CmpOp = Equal | Greater | Less | GreaterEqual | LessEqual deriving (Show, Eq, Ord)
+data CmpOp = Equal | Greater | Less | GreaterEqual | LessEqual deriving (Eq, Ord)
 
 -- Primitive operations
 data Op = Add | Sub | Mul | Div
@@ -37,20 +40,22 @@ data Op = Add | Sub | Mul | Div
         | BitCast Type.Type
         | VectorElem Int
         | TupleElem Int
-        deriving (Show, Eq, Ord)
+        deriving (Eq, Ord)
 
 -- Complex expression, that may not terminate
 data CExpr = If Value Expr Expr
            | App [Value]
            | Atomic AExpr
-           deriving (Show, Eq, Ord)
+           deriving (Eq, Ord)
 
 -- Atomic expression, that is guaranteed to terminate
 data AExpr = Val Value
            | PrimOp Op [Value]
-           deriving (Show, Eq, Ord)
+           deriving (Eq, Ord)
+
+type LetBinding = (Variable, Type.Type, CExpr)
 
 -- Expressions
-data Expr = Let [(Variable, Type.Type, CExpr)] Expr
+data Expr = Let [LetBinding] Expr
           | Complex CExpr
-          deriving (Show, Eq, Ord)
+          deriving (Eq, Ord)

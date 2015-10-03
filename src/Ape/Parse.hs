@@ -127,6 +127,10 @@ bitcastExpr :: Parser Expr.AExpr
 bitcastExpr = do { reserved "bitcast" ; t <- angles typeName ; a <- value ; return $ Expr.PrimOp (Expr.BitCast t) [a] }
             <?> "cast expression"
 
+selectExpr :: Parser Expr.AExpr
+selectExpr = do { reserved "select" ; a <- value ; b <- value ; c <- value ; return $ Expr.PrimOp (Expr.Select) [a, b, c] }
+            <?> "select expression"
+
 binaryExpr :: Expr.Value -> Parser Expr.AExpr
 binaryExpr l =   helper l "+" Expr.Add
              <|> helper l "-" Expr.Sub
@@ -134,6 +138,9 @@ binaryExpr l =   helper l "+" Expr.Add
              <|> helper l "/" Expr.Div
              <|> helper l ">>" Expr.RShift
              <|> helper l "<<" Expr.LShift
+             <|> helper l "&" Expr.And
+             <|> helper l "|" Expr.Or
+             <|> helper l "^" Expr.Xor
              <|> helper l ">" (Expr.Cmp Expr.Greater)
              <|> helper l ">=" (Expr.Cmp Expr.GreaterEqual)
              <|> helper l "<" (Expr.Cmp Expr.Less)
@@ -149,6 +156,7 @@ atomicExpr =   do { a <- value ; binaryExpr a }
            <|> (parens atomicExpr)
            <|> elemExpr
            <|> bitcastExpr
+           <|> selectExpr
            <?> "atomic expression"
 
 expr :: Parser Expr.Expr

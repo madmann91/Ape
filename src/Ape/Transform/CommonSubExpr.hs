@@ -31,19 +31,27 @@ instance CommonSubExpr AExpr where
     commonSubExpr m e (PrimOp op xs) = PrimOp op $ map (commonSubExpr m e) xs
 
 instance CommonSubExpr Expr where
-    commonSubExpr m e (Let v b) = case notFound of
-        [] -> commonSubExpr m e' b
-        _ -> Let notFound (commonSubExpr m' e b)
+    commonSubExpr m e (Let v b) = case v of
+        [] -> commonSubExpr m' e' b
+        _ -> Let v' (commonSubExpr m' e b)
         where
+            handleBinding (expr2var, var2var, bindings) bind@(var, _, expr) =
+                case M.lookup expr expr2var of
+                    Just var' -> (expr2var, insertEnv var2var var var', bindings)
+                    Nothing   -> (M.insert expr var expr2var, var2var, bind:bindings)
+
+            transformBindings prev@(expr2var, var2var, bindings) = if prev == result
+                then result
+                else transformBindings result
+                where
+                    bindings' = reverse $ map (\(w, t, c) -> (w, t, commonSubExpr (M.delete c expr2var) var2var c)) bindings
+                    result = foldl' handleBinding (m, e, []) bindings'
+
             -- Apply common sub-expr to the bindings
-            v' = map (\(w, t, c) -> (w, t, commonSubExpr m e c)) v
-            -- Find the bindings that are in common
-            (found, notFound) = partition (\(_, _, c) -> M.member c m) v'
-            -- Create a new substitution environment
-            e' = foldl (\f (w, _, c) -> insertEnv f w $ forceLookup c m) e found
-            -- Add new variables to mapping
-            m' = foldl (\n (w, _, c) -> M.insert c w n) m notFound
-            forceLookup c n = case M.lookup c n of
-                Just c' -> c'
-                _ -> error "Cannot find value " ++ show(c) ++ " in common sub-expression map"
+            cse = reverse $ map (\(w, t, c) -> (w, t, commonSubExpr m e c)) v
+            -- Create initial mapping, environment, and bindings from the original bindings
+            initial = foldl' handleBinding (m, e, []) cse
+            -- Iterate until fixpoint is reached
+            (m', e', v') = transformBindings initial
+
     commonSubExpr m e (Complex c) = Complex $ commonSubExpr m e c

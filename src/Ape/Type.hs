@@ -13,7 +13,7 @@ data Type = I1 Int
           | F64 Int
           | Tuple [Type]
           | Lambda Type Type
-          deriving (Show, Eq, Ord)
+          deriving (Eq, Ord)
 
 bitCount :: Type -> Int
 bitCount (I1  n) = n * 1

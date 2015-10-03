@@ -3,6 +3,7 @@ import Ape.Env
 import Ape.Eval
 import Ape.Expr
 import Ape.Parse
+import Ape.Print
 import qualified Ape.Type as T
 import Ape.Transform.CommonSubExpr
 
@@ -33,8 +34,8 @@ defaultOptions f = Options { optLevel = 3, files = f }
 
 options :: [ OptDescr (Options -> IO Options) ]
 options =
-    [ Option [] ["opt-level"] (ReqArg readOptLevel "level") "Optimisation level"
-    , Option "h" ["help"] (NoArg showHelp) "Show help"
+    [ Option []    ["opt-level"] (ReqArg readOptLevel "level") "Optimisation level"
+    , Option ['h'] ["help"] (NoArg showHelp) "Show help"
     ]
     where
         readOptLevel arg opt = return opt { optLevel = read arg }
@@ -54,10 +55,16 @@ parseOptions = do
         noInput = putStrLn "No input files" >> (return $ defaultOptions [])
         parsingError errors = do
             mapM_ (\(x:xs) -> putStr $ (toUpper x):xs) errors
-            return $ defaultOptions [] 
+            return $ defaultOptions []
 
-compileFile :: String -> IO ()
-compileFile file = do
+optimize :: Int -> Expr -> Expr
+optimize level ast = do
+    case level of
+        3 -> commonSubExpr emptyExprMap emptyEnv ast
+        _ -> ast
+
+compileFile :: Int -> String -> IO ()
+compileFile opt file = do
     bytes <- BS.readFile file
     let text = E.decodeUtf8 bytes
     case parse irParser file text of
@@ -66,9 +73,9 @@ compileFile file = do
             case check emptyEnv ast of
                 Left msg -> putStrLn msg
                 Right t -> do
-                    print t
-                    print $ commonSubExpr emptyExprMap emptyEnv ast)
+                    putStrLn $ prettyPrint0 t
+                    putStrLn $ prettyPrint0 $ optimize opt ast)
 
 main = do
     opts <- parseOptions
-    mapM_ compileFile (files opts)
+    mapM_ (compileFile $ optLevel opts) (files opts)

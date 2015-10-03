@@ -1,6 +1,7 @@
 module Ape.Check (check) where
 
 import qualified Ape.Expr as E
+import Ape.Print
 import Ape.Env
 import Ape.Type
 
@@ -12,17 +13,17 @@ enforce :: Type -> (Type -> Bool) -> String -> Check Type
 enforce t f msg = if f t then Right t else Left msg
 
 enforceInteger :: Type -> Check Type
-enforceInteger t = enforce t isInteger $ "Integer expected, got \'" ++ (show t) ++ "\'"
+enforceInteger t = enforce t isInteger $ "Integer expected, got \'" ++ (prettyPrint0 t) ++ "\'"
 enforceTuple :: Type -> Check Type
-enforceTuple t = enforce t isTuple $ "Tuple expected, got \'" ++ (show t) ++ "\'"
+enforceTuple t = enforce t isTuple $ "Tuple expected, got \'" ++ (prettyPrint0 t) ++ "\'"
 enforceVector :: Type -> Check Type
-enforceVector t = enforce t isVector $ "Vector expected, got \'" ++ (show t) ++ "\'"
+enforceVector t = enforce t isVector $ "Vector expected, got \'" ++ (prettyPrint0 t) ++ "\'"
 enforceLambda :: Type -> Check Type
-enforceLambda t = enforce t isLambda $ "Lambda expected, got \'" ++ (show t) ++ "\'"
+enforceLambda t = enforce t isLambda $ "Lambda expected, got \'" ++ (prettyPrint0 t) ++ "\'"
 enforceNumeric :: Type -> Check Type
-enforceNumeric t = enforce t isNumeric $ "Numeric type expected, got \'" ++ (show t) ++ "\'"
+enforceNumeric t = enforce t isNumeric $ "Numeric type expected, got \'" ++ (prettyPrint0 t) ++ "\'"
 enforceEqual :: Type -> Type -> Check Type
-enforceEqual t t' = enforce t (==t') $ "Mismatching types, got \'" ++ (show t) ++ "\' and \'" ++ (show t') ++ "\'"
+enforceEqual t t' = enforce t (==t') $ "Mismatching types, got \'" ++ (prettyPrint0 t) ++ "\' and \'" ++ (prettyPrint0 t') ++ "\'"
 
 checkBinOp :: Env Type -> E.Value -> E.Value -> Either String Type
 checkBinOp e a b = do
@@ -91,6 +92,7 @@ instance Checkable E.AExpr where
         _ <- enforceVector ta
         _ <- enforceVector tb
         _ <- enforceVector tc
+        _ <- enforceEqual (vectorElement ta) (I1 1)
         _ <- enforce ta ((vectorSize tb ==) . vectorSize) "Vector sizes do not match in select"
         enforceEqual tb tc
     check e (E.PrimOp (E.BitCast t) [a]) = do
@@ -106,10 +108,9 @@ instance Checkable E.AExpr where
 
 instance Checkable E.Expr where
     check e (E.Let v b) = do
-        e' <- foldM (\f (i, t, b') -> do
-            let f' = insertEnv f i t
-            t' <- check f' b'
-            _  <- enforceEqual t t'
-            return f') e v
+        let e' = foldl (\f (i, t, _) -> insertEnv f i t) e v
+        forM_ v (\(_, t, b') -> do
+            t' <- check e' b'
+            enforceEqual t t')
         check e' b
     check e (E.Complex c) = check e c

@@ -12,6 +12,7 @@ lookupEnv :: Env a -> String -> a
 lookupEnv e i = e SM.! i
 
 insertEnv :: Env a -> String -> a -> Env a
+insertEnv e "_" x = e
 insertEnv e i x = SM.insertWithKey (\k _ _ -> error $ "Identifier " ++ (show k) ++ " already used") i x e
 
 isInEnv :: Env a -> String -> Bool

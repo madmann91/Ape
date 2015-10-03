@@ -12,7 +12,7 @@ cabal-version:       >=1.10
 library
   default-language:    Haskell2010
   build-depends:       base, containers, parsec, text, data-stringmap
-  exposed-modules:     Ape.Expr, Ape.Eval, Ape.Type, Ape.Env, Ape.Check, Ape.Parse,
+  exposed-modules:     Ape.Expr, Ape.Eval, Ape.Type, Ape.Env, Ape.Check, Ape.Parse, Ape.Print,
                        Ape.Transform.Substitute, Ape.Transform.CommonSubExpr
   ghc-options:         -Wall
   hs-source-dirs:      src
