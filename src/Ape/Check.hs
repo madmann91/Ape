@@ -16,8 +16,6 @@ enforceInteger :: Type -> Check Type
 enforceInteger t = enforce t isInteger $ "Integer expected, got \'" ++ (prettyPrint0 t) ++ "\'"
 enforceTuple :: Type -> Check Type
 enforceTuple t = enforce t isTuple $ "Tuple expected, got \'" ++ (prettyPrint0 t) ++ "\'"
-enforceVector :: Type -> Check Type
-enforceVector t = enforce t isVector $ "Vector expected, got \'" ++ (prettyPrint0 t) ++ "\'"
 enforceLambda :: Type -> Check Type
 enforceLambda t = enforce t isLambda $ "Lambda expected, got \'" ++ (prettyPrint0 t) ++ "\'"
 enforceNumeric :: Type -> Check Type
@@ -89,9 +87,6 @@ instance Checkable E.AExpr where
         ta <- check e a
         tb <- check e b
         tc <- check e c
-        _ <- enforceVector ta
-        _ <- enforceVector tb
-        _ <- enforceVector tc
         _ <- enforceEqual (vectorElement ta) (I1 1)
         _ <- enforce ta ((vectorSize tb ==) . vectorSize) "Vector sizes do not match in select"
         enforceEqual tb tc

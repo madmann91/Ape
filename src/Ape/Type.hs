@@ -15,6 +15,11 @@ data Type = I1 Int
           | Lambda Type Type
           deriving (Eq, Ord)
 
+typeSize :: Type -> Int
+typeSize (Tuple t) = 1 + (sum $ map typeSize t)
+typeSize (Lambda a r) = 1 + typeSize a + typeSize r
+typeSize _ = 1
+
 bitCount :: Type -> Int
 bitCount (I1  n) = n * 1
 bitCount (I8  n) = n * 8

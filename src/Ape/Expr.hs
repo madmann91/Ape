@@ -1,12 +1,9 @@
 module Ape.Expr where
 
-import qualified Ape.Type as Type
+import qualified Ape.Type as T
 
 import Data.Int
 import Data.Word
-
--- Memory access rights
-data Access = ReadWrite | ReadOnly | WriteOnly deriving (Eq, Ord)
 
 -- Values, result of the evaluation of a program
 data Value = I1  [Bool]
@@ -22,7 +19,7 @@ data Value = I1  [Bool]
            | F64 [Double]
            | Tuple [Value]
            | Var Variable
-           | Lambda Variable Type.Type Expr
+           | Lambda Variable T.Type Expr
            deriving (Eq, Ord)
 
 -- Variables, represented as IDs, must be unique within a module
@@ -37,7 +34,7 @@ data Op = Add | Sub | Mul | Div
         | And | Or | Xor
         | Select
         | Cmp CmpOp
-        | BitCast Type.Type
+        | BitCast T.Type
         | VectorElem Int
         | TupleElem Int
         deriving (Eq, Ord)
@@ -53,9 +50,30 @@ data AExpr = Val Value
            | PrimOp Op [Value]
            deriving (Eq, Ord)
 
-type LetBinding = (Variable, Type.Type, CExpr)
+type LetBinding = (Variable, T.Type, CExpr)
 
 -- Expressions
 data Expr = Let [LetBinding] Expr
           | Complex CExpr
           deriving (Eq, Ord)
+
+class ExprSize a where
+    exprSize :: a -> Int
+
+instance ExprSize Expr where
+    exprSize (Let v b) = 1 + exprSize b + (sum $ map (\(_,t,c) -> 1 + T.typeSize t + exprSize c) v)
+    exprSize (Complex c) = 1 + exprSize c
+
+instance ExprSize CExpr where
+    exprSize (If c t f) = 1 + exprSize c + exprSize t + exprSize f
+    exprSize (App v) = 1 + (sum $ map exprSize v)
+    exprSize (Atomic a) = 1 + exprSize a
+
+instance ExprSize AExpr where
+    exprSize (Val v) = 1 + exprSize v
+    exprSize (PrimOp _ v) = 1 + (sum $ map exprSize v)
+
+instance ExprSize Value where
+    exprSize (Lambda _ t b) = 1 + T.typeSize t + exprSize b
+    exprSize (Tuple v) = 1 + length v
+    exprSize _ = 1

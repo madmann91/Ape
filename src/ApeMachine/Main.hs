@@ -72,9 +72,7 @@ compileFile opt file = do
         Right exprs -> forM_ exprs (\ast ->
             case check emptyEnv ast of
                 Left msg -> putStrLn msg
-                Right t -> do
-                    putStrLn $ prettyPrint0 t
-                    putStrLn $ prettyPrint0 $ optimize opt ast)
+                Right t -> putStrLn $ prettyPrint0 $ optimize opt ast)
 
 main = do
     opts <- parseOptions

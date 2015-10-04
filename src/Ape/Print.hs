@@ -5,6 +5,7 @@ import Ape.Type as T
 
 import Data.List
 
+-- Contains the indentation level
 newtype Printer = Printer Int
 
 class PrettyPrint a where
@@ -12,6 +13,9 @@ class PrettyPrint a where
     prettyPrint0 :: a -> String
     prettyPrint (Printer _) v = (prettyPrint0 v)
     prettyPrint0 = prettyPrint (Printer 0)
+
+splitLineLimit :: Int
+splitLineLimit = 10
 
 printList0 :: (PrettyPrint a) => String -> [a] -> String
 printList0 = printList (Printer 0)
@@ -33,7 +37,11 @@ printBinOp :: E.Value -> E.Value -> String -> String
 printBinOp a b op = (prettyPrint0 a) ++ " " ++ op ++ " " ++ (prettyPrint0 b)
 
 instance PrettyPrint E.Value where
-    prettyPrint0 (E.I1  v) = "i1 "  ++ showVector v
+    prettyPrint0 (E.I1  v) = "i1 "  ++ printBoolVector v
+        where
+            printBool x = if x then "true" else "false"
+            printBoolVector [x] = printBool x
+            printBoolVector xs = "<" ++ (concat (intersperse ", " $ map printBool xs)) ++ ">"
     prettyPrint0 (E.I8  v) = "i8 "  ++ showVector v
     prettyPrint0 (E.I16 v) = "i16 " ++ showVector v
     prettyPrint0 (E.I32 v) = "i32 " ++ showVector v
@@ -47,10 +55,11 @@ instance PrettyPrint E.Value where
     prettyPrint0 (E.Tuple v) = "(" ++ (printList0 ", " v) ++ ")"
     prettyPrint0 (E.Var v) = v
     prettyPrint0 l@(E.Lambda _ _ _) = prettyPrint (Printer 0) l
-    prettyPrint (Printer ind) (E.Lambda v t b) = "lambda " ++ arg ++ " " ++ body
+    prettyPrint (Printer ind) (E.Lambda v t b) = "lambda " ++ arg ++ sep ++ body
         where
             arg = v ++ ": " ++ prettyPrint0 t
             body = prettyPrint (Printer $ ind + 1) b
+            sep = if exprSize b > splitLineLimit then "\n" ++ (indent $ ind + 1) else " "
     prettyPrint (Printer _) v = prettyPrint0 v
 
 instance PrettyPrint T.Type where
@@ -104,7 +113,5 @@ instance PrettyPrint E.Expr where
             bindingSep = ",\n" ++ indent (ind + 1)
             bindings = (concat (intersperse bindingSep $ map printBinding v))
             body = (prettyPrint (Printer $ ind + 1) b)
-            printBinding (w, t, c) = w ++ ": " ++ (prettyPrint0 t) ++ " = " ++ printLambda c
-            printLambda l@(E.Atomic (E.Val (E.Lambda _ _ _))) = "\n" ++ (indent $ ind + 1) ++ prettyPrint (Printer $ ind + 1) l
-            printLambda w = (prettyPrint (Printer $ ind + 1) w)
+            printBinding (w, t, c) = w ++ ": " ++ (prettyPrint0 t) ++ " = " ++ prettyPrint (Printer $ ind + 1) c
     prettyPrint p (E.Complex c) = prettyPrint p c

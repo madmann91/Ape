@@ -12,7 +12,7 @@ lookupEnv :: Env a -> String -> a
 lookupEnv e i = e SM.! i
 
 insertEnv :: Env a -> String -> a -> Env a
-insertEnv e "_" x = e
+insertEnv e "_" _ = e
 insertEnv e i x = SM.insertWithKey (\k _ _ -> error $ "Identifier " ++ (show k) ++ " already used") i x e
 
 isInEnv :: Env a -> String -> Bool
@@ -21,8 +21,8 @@ isInEnv e i = SM.member i e
 enumEnv :: Env a -> [(String, a)]
 enumEnv e = SM.toList e
 
-freeVariable :: Env a -> String -> String
-freeVariable e s = if SM.member s e
+genVariable :: Env a -> String -> String
+genVariable e s = if SM.member s e
     then next
     else s
     where
