@@ -4,8 +4,8 @@ import Ape.Eval
 import Ape.Expr
 import Ape.Parse
 import Ape.Print
-import qualified Ape.Type as T
 import Ape.Transform.CommonSubExpr
+import Ape.Analysis.BindingTime
 
 import qualified Data.Text.Encoding as E
 import qualified Data.ByteString as BS
@@ -72,7 +72,11 @@ compileFile opt file = do
         Right exprs -> forM_ exprs (\ast ->
             case check emptyEnv ast of
                 Left msg -> putStrLn msg
-                Right t -> putStrLn $ prettyPrint0 $ optimize opt ast)
+                Right t -> do
+                    let optAST = optimize opt ast
+                    let bta = enumEnv $ bindingTime emptyEnv ast
+                    print bta
+                    putStrLn $ prettyPrint0 optAST)
 
 main = do
     opts <- parseOptions

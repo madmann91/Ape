@@ -15,7 +15,10 @@ lookupEnv e i = case SM.lookup i e of
 
 insertEnv :: Env a -> String -> a -> Env a
 insertEnv e "_" _ = e
-insertEnv e i x = SM.insertWithKey (\k _ _ -> error $ "Identifier " ++ (show k) ++ " already used") i x e
+insertEnv e i x = SM.insertWithKey (\k _ _ -> error $ "Identifier " ++ k ++ " already used") i x e
+
+concatEnv :: Env a -> Env a -> Env a
+concatEnv = SM.unionWithKey (\k _ _ -> error $ "Duplicate values for " ++ k)
 
 isInEnv :: Env a -> String -> Bool
 isInEnv e i = SM.member i e
@@ -28,6 +31,6 @@ genVariable e s = if SM.member s e
     then next
     else s
     where
-        next = if c == '9' then m ++ "0" else reverse $ chr (ord c + 1) : tail (reverse m)
+        next = if isDigit c && c /= '9' then reverse $ chr (ord c + 1) : (tail $ reverse m) else m ++ "0"
         c = last m
-        m = last $ map fst $ SM.toListShortestFirst $ SM.prefixFilter s e
+        m = fst $ last $ SM.toListShortestFirst $ SM.prefixFilter s e
