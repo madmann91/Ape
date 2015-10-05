@@ -180,7 +180,7 @@ langDef = Tok.LanguageDef ""
     ";;"
     False
     (letter <|> char '_')
-    (letter <|> char '_')
+    (alphaNum <|> char '_')
     (oneOf ":!#$%&*+./<=>?@\\^|-~")
     (oneOf ":!#$%&*+./<=>?@\\^|-~")
     keywords

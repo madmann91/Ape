@@ -15,6 +15,7 @@ class CommonSubExpr a where
 
 instance CommonSubExpr Value where
     commonSubExpr _ e v@(Var w) = if isInEnv e w then Var $ lookupEnv e w else v
+    commonSubExpr m e (Tuple v) = Tuple $ map (commonSubExpr m e) v
     commonSubExpr m e (Lambda v t b) = Lambda v t (commonSubExpr m e b)
     commonSubExpr _ _ v = v
 
@@ -33,10 +34,13 @@ instance CommonSubExpr AExpr where
 instance CommonSubExpr Expr where
     commonSubExpr m e (Let v b) = case v of
         [] -> commonSubExpr m' e' b
-        _ -> Let v' (commonSubExpr m' e b)
+        _ -> Let v' $ commonSubExpr m' e' b
         where
-            handleBinding (expr2var, var2var, bindings) bind@(var, _, expr) =
-                case M.lookup expr expr2var of
+            handleBinding (expr2var, var2var, bindings) bind@(var, _, expr) = case expr of
+                -- If the binding is under the form let a = b, we just remap a to b
+                Atomic (Val (Var var')) -> (expr2var, insertEnv var2var var var', bindings)
+                -- Otherwise, we need to check if the expression already exists somewhere else in the program
+                _ -> case M.lookup expr expr2var of
                     Just var' -> (expr2var, insertEnv var2var var var', bindings)
                     Nothing   -> (M.insert expr var expr2var, var2var, bind:bindings)
 
@@ -45,7 +49,7 @@ instance CommonSubExpr Expr where
                 else transformBindings result
                 where
                     bindings' = reverse $ map (\(w, t, c) -> (w, t, commonSubExpr (M.delete c expr2var) var2var c)) bindings
-                    result = foldl' handleBinding (m, e, []) bindings'
+                    result = foldl' handleBinding (m, var2var, []) bindings'
 
             -- Apply common sub-expr to the bindings
             cse = reverse $ map (\(w, t, c) -> (w, t, commonSubExpr m e c)) v

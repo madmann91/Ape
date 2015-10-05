@@ -10,6 +10,7 @@ instance Substitute Value where
     substitute e x@(Var v) = if isInEnv e v
                              then lookupEnv e v
                              else x
+    substitute e (Tuple v) = Tuple $ map (substitute e) v
     substitute e (Lambda v t b) = Lambda v t (substitute e b)
     substitute _ x = x
 
