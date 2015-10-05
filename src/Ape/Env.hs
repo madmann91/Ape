@@ -9,7 +9,9 @@ emptyEnv :: Env a
 emptyEnv = SM.empty
 
 lookupEnv :: Env a -> String -> a
-lookupEnv e i = e SM.! i
+lookupEnv e i = case SM.lookup i e of
+    Just v -> v
+    Nothing -> error $ "Undeclared identifier " ++ i
 
 insertEnv :: Env a -> String -> a -> Env a
 insertEnv e "_" _ = e
