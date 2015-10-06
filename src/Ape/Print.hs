@@ -28,7 +28,7 @@ showVector [x] = show x
 showVector xs = "<" ++ (concat (intersperse ", " $ map show xs)) ++ ">"
 
 indent :: Int -> String
-indent i = replicate (i * 4) ' '
+indent i = replicate (i * 2) ' '
 
 printVectorSize :: Int -> String
 printVectorSize i = if i == 1 then "" else "<" ++ (show i) ++ ">"
@@ -83,6 +83,7 @@ instance PrettyPrint E.AExpr where
     prettyPrint0 (E.PrimOp E.Mul [a, b]) = printBinOp a b "*"
     prettyPrint0 (E.PrimOp E.Div [a, b]) = printBinOp a b "/"
     prettyPrint0 (E.PrimOp (E.Cmp E.Equal)   [a, b]) = printBinOp a b "=="
+    prettyPrint0 (E.PrimOp (E.Cmp E.NotEqual)[a, b]) = printBinOp a b "!="
     prettyPrint0 (E.PrimOp (E.Cmp E.Greater) [a, b]) = printBinOp a b ">"
     prettyPrint0 (E.PrimOp (E.Cmp E.Less)    [a, b]) = printBinOp a b "<"
     prettyPrint0 (E.PrimOp (E.Cmp E.GreaterEqual) [a, b]) = printBinOp a b ">="

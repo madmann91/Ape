@@ -26,7 +26,7 @@ data Value = I1  [Bool]
 type Variable = String
 
 -- Comparison functions
-data CmpOp = Equal | Greater | Less | GreaterEqual | LessEqual deriving (Eq, Ord)
+data CmpOp = Equal | NotEqual | Greater | Less | GreaterEqual | LessEqual deriving (Eq, Ord)
 
 -- Primitive operations
 data Op = Add | Sub | Mul | Div

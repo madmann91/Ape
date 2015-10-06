@@ -1,11 +1,10 @@
 import Ape.Check
 import Ape.Env
-import Ape.Eval
 import Ape.Expr
 import Ape.Parse
 import Ape.Print
 import Ape.Transform.CommonSubExpr
-import Ape.Analysis.BindingTime
+import Ape.Transform.PartialEval
 
 import qualified Data.Text.Encoding as E
 import qualified Data.ByteString as BS
@@ -60,7 +59,7 @@ parseOptions = do
 optimize :: Int -> Expr -> Expr
 optimize level ast = do
     case level of
-        3 -> commonSubExpr emptyExprMap emptyEnv ast
+        3 -> partialEval emptyEnv $ commonSubExpr emptyExprMap emptyEnv ast
         _ -> ast
 
 compileFile :: Int -> String -> IO ()
@@ -74,8 +73,6 @@ compileFile opt file = do
                 Left msg -> putStrLn msg
                 Right t -> do
                     let optAST = optimize opt ast
-                    let bta = enumEnv $ bindingTime emptyEnv ast
-                    print bta
                     putStrLn $ prettyPrint0 optAST)
 
 main = do
