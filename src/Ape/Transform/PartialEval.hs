@@ -42,14 +42,18 @@ instance PartialEval E.Expr where
     partialEval e (E.Complex c) = partialEvalComplex e c
 
 instance PartialEval E.AExpr where
-    partialEval e prim@(E.PrimOp op vals) = if allKnown vals
-        then E.Val $ eval op vals
-        else prim
+    partialEval e (E.PrimOp op ops) = if allKnown ops
+        then E.Val $ eval op ops
+        else E.PrimOp op ops
         where
             allKnown = and . map isKnown
             isKnown (E.Var _) = False
             isKnown _ = True
-    partialEval _ a = a
+    partialEval e (E.Val val) = E.Val $ partialEval e val
+
+instance PartialEval E.Value where
+    partialEval e (E.Lambda v t b) = E.Lambda v t $ partialEval e b
+    partialEval _ val = val
 
 partialEvalComplex :: Env E.Value -> E.CExpr -> E.Expr
 partialEvalComplex e (E.If c t f) = if known

@@ -1,5 +1,7 @@
 module Ape.Env where
 
+import Ape.Print
+
 import Data.Char
 import qualified Data.StringMap as SM
 
@@ -25,6 +27,18 @@ isInEnv e i = SM.member i e
 
 enumEnv :: Env a -> [(String, a)]
 enumEnv e = SM.toList e
+
+removeFromEnv :: Env a -> String -> Env a
+removeFromEnv e i = SM.delete i e
+
+mapEnv :: (a-> b) -> Env a -> Env b
+mapEnv = SM.map
+
+mapEnvWithKey :: (String -> a -> b) -> Env a -> Env b
+mapEnvWithKey = SM.mapWithKey
+
+printEnv :: PrettyPrint a => Env a -> IO ()
+printEnv e = print $ map (\(k, v) -> (k, prettyPrint0 v)) (enumEnv e)
 
 genVariable :: Env a -> String -> String
 genVariable e s = if SM.member s e
