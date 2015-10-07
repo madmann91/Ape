@@ -14,7 +14,7 @@ library
   build-depends:       base, containers, parsec, text, data-stringmap
   exposed-modules:     Ape.Expr, Ape.Eval, Ape.Type, Ape.Env, Ape.Check, Ape.Parse, Ape.Print,
                        Ape.Transform.Substitute, Ape.Transform.CommonSubExpr, Ape.Transform.NormalizeBindings,
-                       Ape.Transform.PartialEval
+                       Ape.Transform.PartialEval, Ape.Transform.Specialize
   ghc-options:         -Wall
   hs-source-dirs:      src
 

@@ -5,6 +5,7 @@ import Ape.Eval
 import Ape.Env
 import Ape.Transform.Substitute
 import Ape.Transform.NormalizeBindings
+import Ape.Transform.Specialize
 
 import Data.List
 
@@ -18,6 +19,14 @@ normalizeEnv e = if e == result
         result = mapEnv (substitute e') e
         isLambda (E.Lambda _ _ _) = True
         isLambda _ = False
+
+allKnown :: [E.Value] -> Bool
+allKnown = and . map isKnown
+
+isKnown :: E.Value -> Bool
+isKnown (E.Var _) = False
+isKnown (E.Tuple v) = allKnown v
+isKnown _ = True
 
 class PartialEval a where
     -- Partially evaluates an expression with an environment which contains known values
@@ -58,9 +67,6 @@ instance PartialEval E.AExpr where
         else E.PrimOp op ops'
         where
             ops' = map (substitute e) ops
-            allKnown = and . map isKnown
-            isKnown (E.Var _) = False
-            isKnown _ = True
     partialEval e (E.Val val) = E.Val $ partialEval e val
 
 instance PartialEval E.Value where
@@ -78,6 +84,8 @@ partialEvalComplex e (E.If c t f) = if known
             E.I1 [cond'] -> (True, cond')
             E.Var var  -> (isInEnv e var, lookupEnv e var == E.I1 [True])
             _ -> (False, undefined)
-partialEvalComplex e app@(E.App vals) = E.Complex app
+partialEvalComplex e app@(E.App args) = if allKnown args
+    then specializeApp e app
+    else E.Complex app
 partialEvalComplex e (E.Atomic a) = E.Complex $ E.Atomic $ partialEval e a
 
