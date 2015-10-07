@@ -18,7 +18,7 @@ specializeLambda val _ = E.Complex $ E.Atomic $ E.Val val
 specializeApp :: Env E.Value -> E.CExpr -> E.Expr
 specializeApp e (E.App (v:vs)) = specLambda
     where
-        -- Get the lambda to specialize along with its name (if any)
+        -- Get the lambda to specialize
         lambda = case v of
             E.Var n -> lookupEnv e n
             l -> l

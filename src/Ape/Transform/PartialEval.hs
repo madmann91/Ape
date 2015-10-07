@@ -7,6 +7,9 @@ import Ape.Transform.Substitute
 import Ape.Transform.NormalizeBindings
 import Ape.Transform.Specialize
 
+import Ape.Print
+import System.IO.Unsafe
+
 import Data.List
 
 -- Normalizes the given environment so that it only references itself from within lambdas
@@ -84,8 +87,11 @@ partialEvalComplex e (E.If c t f) = if known
             E.I1 [cond'] -> (True, cond')
             E.Var var  -> (isInEnv e var, lookupEnv e var == E.I1 [True])
             _ -> (False, undefined)
-partialEvalComplex e app@(E.App args) = if allKnown args
-    then specializeApp e app
-    else E.Complex app
+partialEvalComplex e (E.App args) = if allKnown (tail args')
+    then unsafePerformIO $ putStrLn (prettyPrint0 $ plop) >> (return $ plop)
+    else E.Complex $ E.App args'
+    where
+        plop = partialEval e $ specializeApp e (E.App args')
+        args' = (head args) : (map (substitute e) $ tail args)
 partialEvalComplex e (E.Atomic a) = E.Complex $ E.Atomic $ partialEval e a
 
