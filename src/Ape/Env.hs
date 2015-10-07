@@ -31,6 +31,9 @@ enumEnv e = SM.toList e
 removeFromEnv :: Env a -> String -> Env a
 removeFromEnv e i = SM.delete i e
 
+removeFromEnvIf :: Env a -> (a -> Bool) -> Env a
+removeFromEnvIf e f = SM.mapMaybe (\x -> if f x then Nothing else Just x) e
+
 mapEnv :: (a-> b) -> Env a -> Env b
 mapEnv = SM.map
 
