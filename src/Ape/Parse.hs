@@ -146,6 +146,7 @@ binaryExpr l =   helper l "+" E.Add
              <|> helper l "<" (E.Cmp E.Less)
              <|> helper l "<=" (E.Cmp E.LessEqual)
              <|> helper l "==" (E.Cmp E.Equal)
+             <|> helper l "!=" (E.Cmp E.NotEqual)
              <|> (return . E.Val) l
              <?> "binary expression"
     where
@@ -177,10 +178,10 @@ keywords = ["let", "in",
 
 langDef = Tok.LanguageDef ""
     ""
-    ";;"
+    ";"
     False
     (letter <|> char '_')
-    (letter <|> char '_')
+    (alphaNum <|> char '_')
     (oneOf ":!#$%&*+./<=>?@\\^|-~")
     (oneOf ":!#$%&*+./<=>?@\\^|-~")
     keywords

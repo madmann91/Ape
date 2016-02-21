@@ -2,9 +2,13 @@ module Ape.Eval (eval) where
 
 import qualified Ape.Type as T
 import Ape.Expr
+import Ape.Print
 
 import Data.Bits
 import Unsafe.Coerce
+
+binOpError :: String -> Value -> Value -> a
+binOpError str a b = error $ str ++ ": " ++ prettyPrint0 a ++ ", " ++ prettyPrint0 b
 
 addValues :: Value -> Value -> Value
 addValues (I8  a) (I8  b) = I8  $ zipWith (+) a b
@@ -17,7 +21,7 @@ addValues (U32 a) (U32 b) = U32 $ zipWith (+) a b
 addValues (U64 a) (U64 b) = U64 $ zipWith (+) a b
 addValues (F32 a) (F32 b) = F32 $ zipWith (+) a b
 addValues (F64 a) (F64 b) = F64 $ zipWith (+) a b
-addValues _ _ = error "Invalid operands for addition"
+addValues a b = binOpError "Invalid operands for addition" a b
 
 subValues :: Value -> Value -> Value
 subValues (I8  a) (I8  b) = I8  $ zipWith (-) a b
@@ -30,7 +34,7 @@ subValues (U32 a) (U32 b) = U32 $ zipWith (-) a b
 subValues (U64 a) (U64 b) = U64 $ zipWith (-) a b
 subValues (F32 a) (F32 b) = F32 $ zipWith (-) a b
 subValues (F64 a) (F64 b) = F64 $ zipWith (-) a b
-subValues _ _ = error "Invalid operands for subtraction"
+subValues a b = binOpError "Invalid operands for subtraction" a b
 
 mulValues :: Value -> Value -> Value
 mulValues (I8  a) (I8  b) = I8  $ zipWith (*) a b
@@ -43,7 +47,7 @@ mulValues (U32 a) (U32 b) = U32 $ zipWith (*) a b
 mulValues (U64 a) (U64 b) = U64 $ zipWith (*) a b
 mulValues (F32 a) (F32 b) = F32 $ zipWith (*) a b
 mulValues (F64 a) (F64 b) = F64 $ zipWith (*) a b
-mulValues _ _ = error "Invalid operands for multiplication"
+mulValues a b = binOpError "Invalid operands for multiplication" a b
 
 divValues :: Value -> Value -> Value
 divValues (I8  a) (I8  b) = I8  $ zipWith div a b
@@ -56,7 +60,7 @@ divValues (U32 a) (U32 b) = U32 $ zipWith div a b
 divValues (U64 a) (U64 b) = U64 $ zipWith div a b
 divValues (F32 a) (F32 b) = F32 $ zipWith (/) a b
 divValues (F64 a) (F64 b) = F64 $ zipWith (/) a b
-divValues _ _ = error "Invalid operands for division"
+divValues a b = binOpError "Invalid operands for division" a b
 
 leftShiftValues :: Value -> Value -> Value
 leftShiftValues (I8  a) (I8  b) = I8  $ zipWith (\x y -> shiftL x $ fromIntegral y) a b
@@ -67,7 +71,7 @@ leftShiftValues (U8  a) (U8  b) = U8  $ zipWith (\x y -> shiftL x $ fromIntegral
 leftShiftValues (U16 a) (U16 b) = U16 $ zipWith (\x y -> shiftL x $ fromIntegral y) a b
 leftShiftValues (U32 a) (U32 b) = U32 $ zipWith (\x y -> shiftL x $ fromIntegral y) a b
 leftShiftValues (U64 a) (U64 b) = U64 $ zipWith (\x y -> shiftL x $ fromIntegral y) a b
-leftShiftValues _ _ = error "Invalid operands for left shift"
+leftShiftValues a b = binOpError "Invalid operands for left shift" a b
 
 rightShiftValues :: Value -> Value -> Value
 rightShiftValues (I8  a) (I8  b) = I8  $ zipWith (\x y -> shiftR x $ fromIntegral y) a b
@@ -78,7 +82,7 @@ rightShiftValues (U8  a) (U8  b) = U8  $ zipWith (\x y -> shiftR x $ fromIntegra
 rightShiftValues (U16 a) (U16 b) = U16 $ zipWith (\x y -> shiftR x $ fromIntegral y) a b
 rightShiftValues (U32 a) (U32 b) = U32 $ zipWith (\x y -> shiftR x $ fromIntegral y) a b
 rightShiftValues (U64 a) (U64 b) = U64 $ zipWith (\x y -> shiftR x $ fromIntegral y) a b
-rightShiftValues _ _ = error "Invalid operands for right shift"
+rightShiftValues a b = binOpError "Invalid operands for right shift" a b
 
 andValues :: Value -> Value -> Value
 andValues (I1  a) (I1  b) = I1  $ zipWith (.&.) a b
@@ -90,7 +94,7 @@ andValues (U8  a) (U8  b) = U8  $ zipWith (.&.) a b
 andValues (U16 a) (U16 b) = U16 $ zipWith (.&.) a b
 andValues (U32 a) (U32 b) = U32 $ zipWith (.&.) a b
 andValues (U64 a) (U64 b) = U64 $ zipWith (.&.) a b
-andValues _ _ = error "Invalid operands for bitwise and"
+andValues a b = binOpError "Invalid operands for bitwise and" a b
 
 orValues :: Value -> Value -> Value
 orValues (I1  a) (I1  b) = I1  $ zipWith (.|.) a b
@@ -102,7 +106,7 @@ orValues (U8  a) (U8  b) = U8  $ zipWith (.|.) a b
 orValues (U16 a) (U16 b) = U16 $ zipWith (.|.) a b
 orValues (U32 a) (U32 b) = U32 $ zipWith (.|.) a b
 orValues (U64 a) (U64 b) = U64 $ zipWith (.|.) a b
-orValues _ _ = error "Invalid operands for bitwise or"
+orValues a b = binOpError "Invalid operands for bitwise or" a b
 
 xorValues :: Value -> Value -> Value
 xorValues (I1  a) (I1  b) = I1  $ zipWith xor a b
@@ -114,12 +118,12 @@ xorValues (U8  a) (U8  b) = U8  $ zipWith xor a b
 xorValues (U16 a) (U16 b) = U16 $ zipWith xor a b
 xorValues (U32 a) (U32 b) = U32 $ zipWith xor a b
 xorValues (U64 a) (U64 b) = U64 $ zipWith xor a b
-xorValues _ _ = error "Invalid operands for bitwise xor"
+xorValues a b = error "Invalid operands for bitwise xor" a b
 
 select :: Bool -> a -> a -> a
 select a b c = if a then b else c
 
-selectValues :: Value -> Value -> Value-> Value
+selectValues :: Value -> Value -> Value -> Value
 selectValues (I1 a) (I1  b) (I1  c) = I1  $ zipWith3 select a b c
 selectValues (I1 a) (I8  b) (I8  c) = I8  $ zipWith3 select a b c
 selectValues (I1 a) (I16 b) (I16 c) = I16 $ zipWith3 select a b c
@@ -133,6 +137,7 @@ selectValues _ _ _ = error "Invalid operands for select"
 
 compareFunction :: (Ord a) => CmpOp -> (a -> a -> Bool)
 compareFunction Equal        = (==)
+compareFunction NotEqual     = (/=)
 compareFunction Greater      = (>)
 compareFunction Less         = (<)
 compareFunction GreaterEqual = (>=)

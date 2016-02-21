@@ -1,11 +1,10 @@
 import Ape.Check
 import Ape.Env
-import Ape.Eval
 import Ape.Expr
 import Ape.Parse
 import Ape.Print
-import qualified Ape.Type as T
 import Ape.Transform.CommonSubExpr
+import Ape.Transform.PartialEval
 
 import qualified Data.Text.Encoding as E
 import qualified Data.ByteString as BS
@@ -60,7 +59,8 @@ parseOptions = do
 optimize :: Int -> Expr -> Expr
 optimize level ast = do
     case level of
-        3 -> commonSubExpr emptyExprMap emptyEnv ast
+        3 -> partialEval emptyEnv (optimize 2 ast)
+        2 -> commonSubExpr emptyExprMap emptyEnv (optimize 1 ast)
         _ -> ast
 
 compileFile :: Int -> String -> IO ()
@@ -72,7 +72,9 @@ compileFile opt file = do
         Right exprs -> forM_ exprs (\ast ->
             case check emptyEnv ast of
                 Left msg -> putStrLn msg
-                Right t -> putStrLn $ prettyPrint0 $ optimize opt ast)
+                Right t -> do
+                    let optAST = optimize opt ast
+                    putStrLn $ prettyPrint0 optAST)
 
 main = do
     opts <- parseOptions

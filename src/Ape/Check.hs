@@ -47,7 +47,9 @@ instance Checkable E.Value where
     check e (E.Tuple v) = do
         tv <- mapM (check e) v
         return (Tuple tv)
-    check e (E.Var v) = return $ lookupEnv e v
+    check e (E.Var v) = if isInEnv e v
+        then Right $ lookupEnv e v
+        else Left $ "Undeclared identifier " ++ v
     check e (E.Lambda v t b) = do
         tb <- check e' b
         return $ Lambda t tb
