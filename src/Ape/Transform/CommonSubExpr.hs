@@ -5,6 +5,9 @@ import Ape.Env
 import qualified Data.Map.Strict as M
 import Data.List
 
+import Ape.Print
+import Debug.Trace
+
 type ExprMap = M.Map CExpr String
 
 emptyExprMap :: ExprMap
@@ -33,25 +36,25 @@ instance CommonSubExpr AExpr where
 instance CommonSubExpr Expr where
     commonSubExpr m e (Let v b) = case v of
         [] -> commonSubExpr m' e' b
-        _ -> Let v' (commonSubExpr m' e b)
+        _ -> Let v' (commonSubExpr m' e' b)
         where
             handleBinding (expr2var, var2var, bindings) bind@(var, _, expr) =
                 case M.lookup expr expr2var of
-                    Just var' -> (expr2var, insertEnv var2var var var', bindings)
-                    Nothing   -> (M.insert expr var expr2var, var2var, bind:bindings)
+                    Just var' | var' /= var -> (expr2var, insertEnv var2var var var', bindings)
+                    _  -> (M.insert expr var expr2var, var2var, bind:bindings)
+
+            handleBindings (expr2var, var2var, bindings) = (expr2var', var2var', reverse bindings')
+                where
+                    (expr2var', var2var', bindings') = foldl' handleBinding (expr2var, var2var, []) bindings
 
             transformBindings prev@(expr2var, var2var, bindings) = if prev == result
                 then result
                 else transformBindings result
                 where
-                    bindings' = reverse $ map (\(w, t, c) -> (w, t, commonSubExpr (M.delete c expr2var) var2var c)) bindings
-                    result = foldl' handleBinding (m, e, []) bindings'
+                    bindings' = map (\(w, t, c) -> (w, t, commonSubExpr (M.delete c expr2var) var2var c)) bindings
+                    result = handleBindings (expr2var, var2var, bindings')
 
-            -- Apply common sub-expr to the bindings
-            cse = reverse $ map (\(w, t, c) -> (w, t, commonSubExpr m e c)) v
-            -- Create initial mapping, environment, and bindings from the original bindings
-            initial = foldl' handleBinding (m, e, []) cse
             -- Iterate until fixpoint is reached
-            (m', e', v') = transformBindings initial
+            (m', e', v') = transformBindings $ handleBindings (m, e, v)
 
     commonSubExpr m e (Complex c) = Complex $ commonSubExpr m e c
