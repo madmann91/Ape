@@ -39,7 +39,7 @@ instance CommonSubExpr AExpr where
     commonSubExpr m e (PrimOp op xs) = PrimOp op $ map (commonSubExpr m e) xs
 
 instance CommonSubExpr Expr where
-    commonSubExpr m e (Let v b) = case v of
+    commonSubExpr m e (Let v b) = case v' of
         [] -> commonSubExpr m' e'' b
         _ -> Let v' $ commonSubExpr m' e'' b
         where
