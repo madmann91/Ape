@@ -78,8 +78,14 @@ instance Checkable E.AExpr where
     check e (E.PrimOp E.Sub [a, b]) = checkBinOp e a b >>= enforceNumeric
     check e (E.PrimOp E.Mul [a, b]) = checkBinOp e a b >>= enforceNumeric
     check e (E.PrimOp E.Div [a, b]) = checkBinOp e a b >>= enforceNumeric
-    check e (E.PrimOp (E.Cmp E.Equal) [a, b]) = checkBinOp e a b >> return (I1 1)
-    check e (E.PrimOp (E.Cmp _) [a, b]) = checkBinOp e a b >>= enforceNumeric >> return (I1 1)
+    check e (E.PrimOp (E.Cmp op) [a, b])
+        | op == E.Equal || op == E.NotEqual = do
+            t <- checkBinOp e a b
+            return (I1 $ vectorSize t)
+        | otherwise = do
+            t <- checkBinOp e a b
+            _ <- enforceNumeric t
+            return (I1 $ vectorSize t)
     check e (E.PrimOp E.RShift [a, b]) = checkBinOp e a b >>= enforceInteger
     check e (E.PrimOp E.LShift [a, b]) = checkBinOp e a b >>= enforceInteger
     check e (E.PrimOp E.And [a, b]) = checkBinOp e a b >>= enforceInteger
