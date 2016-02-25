@@ -5,6 +5,7 @@ import Ape.Parse
 import Ape.Print
 import Ape.Transform.CommonSubExpr
 import Ape.Transform.PartialEval
+import Ape.Transform.NormalizeExpr
 
 import qualified Data.Text.Encoding as E
 import qualified Data.ByteString as BS
@@ -61,6 +62,7 @@ optimize level ast = do
     case level of
         3 -> partialEval emptyEnv (optimize 2 ast)
         2 -> commonSubExpr emptyExprMap emptyEnv (optimize 1 ast)
+        1 -> normalizeExpr (optimize 0 ast)
         _ -> ast
 
 compileFile :: Int -> String -> IO ()

@@ -77,3 +77,13 @@ instance ExprSize Value where
     exprSize (Lambda _ t b) = 1 + T.typeSize t + exprSize b
     exprSize (Tuple v) = 1 + length v
     exprSize _ = 1
+
+isSymmetric :: Op -> Bool
+isSymmetric Add = True
+isSymmetric Mul = True
+isSymmetric And = True
+isSymmetric Or  = True
+isSymmetric Xor = True
+isSymmetric (Cmp Equal) = True
+isSymmetric (Cmp NotEqual) = True
+isSymmetric _ = False
