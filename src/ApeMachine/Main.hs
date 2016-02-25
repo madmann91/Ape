@@ -5,6 +5,7 @@ import Ape.Parse
 import Ape.Print
 import Ape.Transform.CommonSubExpr
 import Ape.Transform.PartialEval
+import Ape.Transform.NormalizeExpr
 
 import qualified Data.Text.Encoding as E
 import qualified Data.ByteString as BS
@@ -47,19 +48,20 @@ parseOptions :: IO Options
 parseOptions = do
     args <- getArgs
     case getOpt RequireOrder options args of
-        ([], [], []) -> noInput
-        (actions, nonOptions, [])-> foldl (>>=) (return $ defaultOptions nonOptions) actions
+        ([], [], []) -> return $ defaultOptions []
+        (actions, nonOptions, []) -> foldl (>>=) (return $ defaultOptions nonOptions) actions
         (_, _, errors) -> parsingError errors
     where
-        noInput = putStrLn "No input files" >> (return $ defaultOptions [])
         parsingError errors = do
             mapM_ (\(x:xs) -> putStr $ (toUpper x):xs) errors
             return $ defaultOptions []
 
 optimize :: Int -> Expr -> Expr
-optimize level ast = do
+optimize level ast =
     case level of
-        3 -> partialEval emptyEnv $ commonSubExpr emptyExprMap emptyEnv ast
+        3 -> partialEval emptyEnv (optimize 2 ast)
+        2 -> commonSubExpr emptyExprMap emptyEnv (optimize 1 ast)
+        1 -> normalizeExpr (optimize 0 ast)
         _ -> ast
 
 compileFile :: Int -> String -> IO ()
@@ -77,4 +79,7 @@ compileFile opt file = do
 
 main = do
     opts <- parseOptions
-    mapM_ (compileFile $ optLevel opts) (files opts)
+    case opts of
+        Options _ [] -> putStrLn "No input files."
+        Options l _ | l > 3 || l < 0 -> putStrLn "Unsupported optimization level."
+        Options l f -> mapM_ (compileFile $ optLevel opts) (files opts)

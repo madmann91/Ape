@@ -178,7 +178,7 @@ keywords = ["let", "in",
 
 langDef = Tok.LanguageDef ""
     ""
-    ";;"
+    ";"
     False
     (letter <|> char '_')
     (alphaNum <|> char '_')

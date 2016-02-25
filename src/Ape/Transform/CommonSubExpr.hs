@@ -13,6 +13,13 @@ emptyExprMap = M.empty
 class CommonSubExpr a where
     commonSubExpr :: ExprMap -> Env Variable -> a -> a
 
+-- Make all variables in the environment point their final renamed form
+normalizeEnv :: Env Variable -> Env Variable
+normalizeEnv e = if next == e
+    then e
+    else normalizeEnv next
+    where next = mapEnv (\v -> if isInEnv e v then lookupEnv e v else v) e
+
 instance CommonSubExpr Value where
     commonSubExpr _ e v@(Var w) = if isInEnv e w then Var $ lookupEnv e w else v
     commonSubExpr m e (Tuple v) = Tuple $ map (commonSubExpr m e) v
@@ -33,10 +40,10 @@ instance CommonSubExpr AExpr where
 
 instance CommonSubExpr Expr where
     commonSubExpr m e (Let v b) = case v of
-        [] -> commonSubExpr m' e' b
-        _ -> Let v' $ commonSubExpr m' e' b
+        [] -> commonSubExpr m' e'' b
+        _ -> Let v' $ commonSubExpr m' e'' b
         where
-            handleBinding (expr2var, var2var, bindings) bind@(var, _, expr) = case expr of
+            handleSingleBinding (expr2var, var2var, bindings) bind@(var, _, expr) = case expr of
                 -- If the binding is under the form let a = b, we just remap a to b
                 Atomic (Val (Var var')) -> (expr2var, insertEnv var2var var var', bindings)
                 -- Otherwise, we need to check if the expression already exists somewhere else in the program
@@ -44,18 +51,18 @@ instance CommonSubExpr Expr where
                     Just var' -> (expr2var, insertEnv var2var var var', bindings)
                     Nothing   -> (M.insert expr var expr2var, var2var, bind:bindings)
 
+            handleBindings (expr2var, var2var, bindings) = (expr2var', var2var', reverse bindings')
+                where (expr2var', var2var', bindings') = foldl' handleSingleBinding (expr2var, var2var, []) bindings
+
             transformBindings prev@(expr2var, var2var, bindings) = if prev == result
                 then result
                 else transformBindings result
                 where
-                    bindings' = reverse $ map (\(w, t, c) -> (w, t, commonSubExpr (M.delete c expr2var) var2var c)) bindings
-                    result = foldl' handleBinding (m, var2var, []) bindings'
+                    bindings' = map (\(w, t, c) -> (w, t, commonSubExpr (M.delete c expr2var) var2var c)) bindings
+                    result = handleBindings (m, var2var, bindings')
 
-            -- Apply common sub-expr to the bindings
-            cse = reverse $ map (\(w, t, c) -> (w, t, commonSubExpr m e c)) v
-            -- Create initial mapping, environment, and bindings from the original bindings
-            initial = foldl' handleBinding (m, e, []) cse
             -- Iterate until fixpoint is reached
-            (m', e', v') = transformBindings initial
+            (m', e', v') = transformBindings $ handleBindings (m, e, v)
+            e'' = normalizeEnv e'
 
     commonSubExpr m e (Complex c) = Complex $ commonSubExpr m e c

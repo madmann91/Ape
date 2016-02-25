@@ -1,20 +1,36 @@
 module Ape.Transform.PartialEval(partialEval) where
 
 import qualified Ape.Expr as E
-import qualified Ape.Type as T
 import Ape.Eval
 import Ape.Env
 import Ape.Transform.Substitute
 import Ape.Transform.NormalizeBindings
+import Ape.Transform.Specialize
 
 import Data.List
 
-type TypedValue = (T.Type, E.Value)
-type TypedCExpr = (T.Type, E.CExpr)
+-- Normalizes the given environment so that it only references itself from within lambdas
+normalizeEnv :: Env E.Value -> Env E.Value
+normalizeEnv e = if e == result
+    then result
+    else normalizeEnv result
+    where
+        e' = removeFromEnvIf e isLambda
+        result = mapEnv (substitute e') e
+        isLambda (E.Lambda _ _ _) = True
+        isLambda _ = False
+
+allKnown :: [E.Value] -> Bool
+allKnown = and . map isKnown
+
+isKnown :: E.Value -> Bool
+isKnown (E.Var _) = False
+isKnown (E.Tuple v) = allKnown v
+isKnown _ = True
 
 class PartialEval a where
     -- Partially evaluates an expression with an environment which contains known values
-    partialEval :: Env TypedValue -> a -> a
+    partialEval :: Env E.Value -> a -> a
 
 instance PartialEval E.Expr where
     partialEval e (E.Let v b) = case v' of
@@ -23,7 +39,7 @@ instance PartialEval E.Expr where
         where
             b' = partialEval e' b
 
-            handleBindings :: (Env TypedValue, [E.LetBinding]) -> (Env TypedValue, [E.LetBinding])
+            handleBindings :: (Env E.Value, [E.LetBinding]) -> (Env E.Value, [E.LetBinding])
             handleBindings prev@(var2val, bindings) = if result == prev
                 then result
                 else handleBindings result
@@ -39,28 +55,25 @@ instance PartialEval E.Expr where
                     -- Store the values in the new environment
                     extractValue (E.Atomic (E.Val val)) = val
                     extractValue _ = error "Non-value given to extractValue"
-                    var2val' = foldl' (\f (w, t, val) -> insertEnv f w (t, extractValue val)) var2val values
-                    result = (var2val', bindings')
+                    var2val' = foldl' (\f (w, _, val) -> insertEnv f w $ extractValue val) var2val values
+                    result = (normalizeEnv var2val', bindings')
 
             (e', v') = handleBindings (e, v)
-            --ce' = foldl' (\f (w, t, c) -> insertEnv f w (t, c)) ce v
     partialEval e (E.Complex c) = partialEvalComplex e c
 
 instance PartialEval E.AExpr where
-    partialEval e (E.PrimOp op ops) = if allKnown ops
-        then E.Val $ eval op ops
-        else E.PrimOp op ops
+    partialEval e (E.PrimOp op ops) = if allKnown ops'
+        then E.Val $ eval op ops'
+        else E.PrimOp op ops'
         where
-            allKnown = and . map isKnown
-            isKnown (E.Var _) = False
-            isKnown _ = True
+            ops' = map (substitute e) ops
     partialEval e (E.Val val) = E.Val $ partialEval e val
 
 instance PartialEval E.Value where
     partialEval e (E.Lambda v t b) = E.Lambda v t $ partialEval e b
-    partialEval _ val = val
+    partialEval e val = substitute e val
 
-partialEvalComplex :: Env TypedValue -> E.CExpr -> E.Expr
+partialEvalComplex :: Env E.Value -> E.CExpr -> E.Expr
 partialEvalComplex e branch@(E.If c t f) = if known
     -- Evaluate if when the condition is known
     then if cond then partialEval e t else partialEval e f
@@ -68,7 +81,11 @@ partialEvalComplex e branch@(E.If c t f) = if known
     where
         (known, cond) = case c of
             E.I1 [cond'] -> (True, cond')
-            E.Var var  -> (True, isInEnv e var && snd (lookupEnv e var) == E.I1 [True])
+            E.Var var  -> (isInEnv e var, lookupEnv e var == E.I1 [True])
             _ -> (False, undefined)
-partialEvalComplex e app@(E.App vals) = E.Complex app
-partialEvalComplex e (E.Atomic a) = E.Complex $ E.Atomic $ partialEval e (substituteWith snd e a)
+partialEvalComplex e (E.App args) = if allKnown (tail args')
+    then partialEval e $ specializeApp e (E.App args')
+    else E.Complex $ E.App args'
+    where
+        args' = (head args) : (map (substitute e) $ tail args)
+partialEvalComplex e (E.Atomic a) = E.Complex $ E.Atomic $ partialEval e a
