@@ -14,8 +14,16 @@ instance NormalizeExpr CExpr where
     normalizeExpr (Atomic a) = Atomic (normalizeExpr a)
     normalizeExpr (App v) = App v
 
--- Normalizes primops so that variables are always on the right, sorted by name
+-- Normalizes primops so that variables are always on the right, sorted by name.
+-- Additionally, simplifies arithmetic expressions like 1 * x, o * x or 0 + x and x / 1.
 instance NormalizeExpr AExpr where
+    normalizeExpr (PrimOp Add [x, y]) | isZero x = Val y
+    normalizeExpr (PrimOp Add [x, y]) | isZero y = Val x
+    normalizeExpr (PrimOp Mul [x, y]) | isOne x = Val y
+    normalizeExpr (PrimOp Mul [x, y]) | isOne y = Val x
+    normalizeExpr (PrimOp Mul [x, _]) | isZero x = Val x
+    normalizeExpr (PrimOp Mul [_, y]) | isZero y = Val y
+    normalizeExpr (PrimOp Div [x, y]) | isOne y = Val x
     normalizeExpr (PrimOp op [a, b]) | isSymmetric op && a > b = PrimOp op [b, a]
     normalizeExpr (PrimOp (Cmp Less) [a, b]) | a > b = PrimOp (Cmp Greater) [b, a]
     normalizeExpr (PrimOp (Cmp Greater) [a, b]) | a > b = PrimOp (Cmp Less) [b, a]

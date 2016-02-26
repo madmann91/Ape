@@ -78,6 +78,34 @@ instance ExprSize Value where
     exprSize (Tuple v) = 1 + length v
     exprSize _ = 1
 
+isOne :: Value -> Bool
+isOne (I1 v)  = all (==True) v
+isOne (I8 v)  = all (==1) v
+isOne (I16 v) = all (==1) v
+isOne (I32 v) = all (==1) v
+isOne (I64 v) = all (==1) v
+isOne (U8 v)  = all (==1) v
+isOne (U16 v) = all (==1) v
+isOne (U32 v) = all (==1) v
+isOne (U64 v) = all (==1) v
+isOne (F32 v) = all (==1) v
+isOne (F64 v) = all (==1) v
+isOne _ = False
+
+isZero :: Value -> Bool
+isZero (I1 v)  = all (==False) v
+isZero (I8 v)  = all (==0) v
+isZero (I16 v) = all (==0) v
+isZero (I32 v) = all (==0) v
+isZero (I64 v) = all (==0) v
+isZero (U8 v)  = all (==0) v
+isZero (U16 v) = all (==0) v
+isZero (U32 v) = all (==0) v
+isZero (U64 v) = all (==0) v
+isZero (F32 v) = all (==0) v
+isZero (F64 v) = all (==0) v
+isZero _ = False
+
 isSymmetric :: Op -> Bool
 isSymmetric Add = True
 isSymmetric Mul = True
