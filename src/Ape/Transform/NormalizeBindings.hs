@@ -9,7 +9,7 @@ import Data.List
 
 -- Renaming of the bindings is done in order to avoid name clashes
 -- when pulling up a binding from a lower level
-renameBindings :: S.Set String -> [E.LetBinding] -> (S.Set String, [E.LetBinding])
+renameBindings :: S.Set String -> [E.LetBinding E.Info] -> (S.Set String, [E.LetBinding E.Info])
 renameBindings variables = foldl' rename (variables, [])
     where
         isUsed s v = S.member v s
@@ -20,7 +20,7 @@ renameBindings variables = foldl' rename (variables, [])
 -- Beta-expansion creates constructs such as let a = (let b = c in d) in e.
 -- This is not allowed in ANF. Hence, we transform this expression into:
 -- let a = d, b = c in e.
-normalizeBindings :: Env a -> [(E.Variable, T.Type, E.Expr)] -> [E.LetBinding]
+normalizeBindings :: Env a -> [(E.Variable, T.Type, E.Expr E.Info)] -> [E.LetBinding E.Info]
 normalizeBindings e bindings = normalize names bindings []
     where
         -- Insert all the names in a set
@@ -29,7 +29,7 @@ normalizeBindings e bindings = normalize names bindings []
             -- Already normalized case
             (var, t, E.Complex c) -> normalize s bs ((var, t, c):ns)
             -- Normalization occurs here
-            (var, t, E.Let vars body) -> normalize s' ((var, t, body):bs) (renamedVars ++ ns)
+            (var, t, E.Let _ vars body) -> normalize s' ((var, t, body):bs) (renamedVars ++ ns)
                 where
                     (s', renamedVars) = renameBindings s vars
         normalize _ [] ns = reverse $ ns

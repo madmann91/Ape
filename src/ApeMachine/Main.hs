@@ -56,13 +56,15 @@ parseOptions = do
             mapM_ (\(x:xs) -> putStr $ (toUpper x):xs) errors
             return $ defaultOptions []
 
-optimize :: Int -> Expr -> Expr
+optimize :: Int -> Expr Info -> Expr Info
 optimize level ast =
     case level of
-        3 -> partialEval emptyEnv (optimize 2 ast)
-        2 -> commonSubExpr emptyExprMap emptyEnv (optimize 1 ast)
-        1 -> normalizeExpr (optimize 0 ast)
-        _ -> ast
+        3 -> partialEval emptyEnv ast'
+        1 -> commonSubExpr emptyExprMap emptyEnv ast'
+        0 -> ast
+        _ -> ast'
+    where
+        ast' = optimize (level - 1) ast
 
 compileFile :: Int -> String -> IO ()
 compileFile opt file = do
@@ -73,8 +75,8 @@ compileFile opt file = do
         Right exprs -> forM_ exprs (\ast ->
             case check emptyEnv ast of
                 Left msg -> putStrLn msg
-                Right t -> do
-                    let optAST = optimize opt ast
+                Right ast' -> do
+                    let optAST = optimize opt ast'
                     putStrLn $ prettyPrint0 optAST)
 
 main = do
