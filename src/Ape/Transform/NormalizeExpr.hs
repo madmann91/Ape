@@ -32,5 +32,5 @@ instance NormalizeExpr AExpr where
     normalizeExpr (PrimOp i (Cmp Greater) [a, b]) | a > b = PrimOp i (Cmp Less) [b, a]
     normalizeExpr (PrimOp i (Cmp LessEqual) [a, b]) | a > b = PrimOp i (Cmp GreaterEqual) [b, a]
     normalizeExpr (PrimOp i (Cmp GreaterEqual) [a, b]) | a > b = PrimOp i (Cmp LessEqual) [b, a]
-    normalizeExpr e@_ = e
+    normalizeExpr e = e
 

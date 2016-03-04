@@ -187,6 +187,16 @@ isZero (F32 _ v) = all (==0) v
 isZero (F64 _ v) = all (==0) v
 isZero _ = False
 
+isSymmetric :: Op -> Bool
+isSymmetric Add = True
+isSymmetric Mul = True
+isSymmetric And = True
+isSymmetric Or  = True
+isSymmetric Xor = True
+isSymmetric (Cmp Equal) = True
+isSymmetric (Cmp NotEqual) = True
+isSymmetric _ = False
+
 zero :: a -> T.Type -> Value a
 zero i (T.I1  n) = I1  i (replicate n False)
 zero i (T.I8  n) = I8  i (replicate n 0)
@@ -215,12 +225,3 @@ one i (T.F32 n) = F32 i (replicate n 1)
 one i (T.F64 n) = F64 i (replicate n 1)
 one _ _ = error "Invalid type for one"
 
-isSymmetric :: Op -> Bool
-isSymmetric Add = True
-isSymmetric Mul = True
-isSymmetric And = True
-isSymmetric Or  = True
-isSymmetric Xor = True
-isSymmetric (Cmp Equal) = True
-isSymmetric (Cmp NotEqual) = True
-isSymmetric _ = False
