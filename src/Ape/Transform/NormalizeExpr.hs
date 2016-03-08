@@ -15,7 +15,7 @@ instance NormalizeExpr CExpr where
     normalizeExpr (Atomic a) = Atomic (normalizeExpr a)
 
 -- Normalizes primops so that variables are always on the right, sorted by name.
--- Additionally, simplifies arithmetic expressions like 1 * x, o * x, 0 + x...
+-- Additionally, simplifies expressions like 1 * x, o * x, 0 + x...
 instance NormalizeExpr AExpr where
     normalizeExpr (PrimOp _ Add [x, y]) | isZero x = Val y
     normalizeExpr (PrimOp _ Add [x, y]) | isZero y = Val x
@@ -26,7 +26,12 @@ instance NormalizeExpr AExpr where
     normalizeExpr (PrimOp _ Div [x, y]) | isOne y = Val x
     normalizeExpr (PrimOp _ And [x, y]) | x == y = Val x
     normalizeExpr (PrimOp _ Or  [x, y]) | x == y = Val x
-    normalizeExpr (PrimOp i Xor [x, y]) | x == y = Val $ zero i (typeInfo i)
+    normalizeExpr (PrimOp _ Or  [x, y]) | x == y = Val x
+    normalizeExpr (PrimOp _ LShift [a, b]) | isZero b = Val $ a
+    normalizeExpr (PrimOp _ RShift [a, b]) | isZero b = Val $ a
+    normalizeExpr (PrimOp i (BitCast t) [x]) | typeInfo i == t = Val $ x
+    normalizeExpr (PrimOp _ Select [I1 _ c, a, _]) | all id c = Val $ a
+    normalizeExpr (PrimOp _ Select [I1 _ c, _, b]) | not (any id c) = Val $ b
     normalizeExpr (PrimOp i op [a, b]) | isSymmetric op && a > b = PrimOp i op [b, a]
     normalizeExpr (PrimOp i (Cmp Less) [a, b]) | a > b = PrimOp i (Cmp Greater) [b, a]
     normalizeExpr (PrimOp i (Cmp Greater) [a, b]) | a > b = PrimOp i (Cmp Less) [b, a]
