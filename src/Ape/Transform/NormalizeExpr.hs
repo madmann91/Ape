@@ -27,6 +27,7 @@ instance NormalizeExpr AExpr where
     normalizeExpr (PrimOp _ And [x, y]) | x == y = Val x
     normalizeExpr (PrimOp _ Or  [x, y]) | x == y = Val x
     normalizeExpr (PrimOp _ Or  [x, y]) | x == y = Val x
+    normalizeExpr (PrimOp i Xor [x, y]) | x == y = Val $ zero i (typeInfo i)
     normalizeExpr (PrimOp _ LShift [a, b]) | isZero b = Val $ a
     normalizeExpr (PrimOp _ RShift [a, b]) | isZero b = Val $ a
     normalizeExpr (PrimOp i (BitCast t) [x]) | typeInfo i == t = Val $ x
